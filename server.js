@@ -7,11 +7,13 @@ const fs = require('fs');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
-const session = require('express-session');
 
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
+
+
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -21,46 +23,7 @@ const io = new Server(server, {
 
 app.use(cors());
 
-// --- SESSION & AUTHENTICATION SETUP ---
-app.use(express.urlencoded({ extended: true }));
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'antigravity_core_secret',
-    resave: false,
-    saveUninitialized: false
-}));
-
-// Route Protection Middleware
-app.use((req, res, next) => {
-    // Whitelist specific paths (like login page and css)
-    if (req.path === '/login.html' || req.path === '/login' || req.path === '/style.css') {
-        return next();
-    }
-    
-    // Redirect unauthenticated requests to login
-    if (!req.session.authenticated) {
-        return res.redirect('/login.html');
-    }
-    
-    next();
-});
-
-// Login Handler
-app.post('/login', (req, res) => {
-    const { username, password } = req.body;
-    
-    // Env Credentials
-    const validUsername = process.env.APP_USERNAME || 'admin';
-    const validPassword = process.env.APP_PASSWORD || 'password123';
-    
-    if (username === validUsername && password === validPassword) {
-        req.session.authenticated = true;
-        res.redirect('/');
-    } else {
-        res.redirect('/login.html?error=1');
-    }
-});
-
-// Serve frontend only AFTER authentication passes
+// Serve frontend directly as public entry point
 app.use(express.static('public'));
 
 const upload = multer({ dest: 'uploads/' });
