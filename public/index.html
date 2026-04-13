@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Primary Meta Tags -->
+    <title>Pro AI Background Eraser | Remove Backgrounds Instantly</title>
+    <meta name="title" content="Pro AI Background Eraser | Remove Backgrounds Instantly">
+    <meta name="description" content="Use our dynamic AI-powered tool to instantly erase image backgrounds. Customize with solid colors, export standard passport photos, and compose custom backdrop layers directly in your browser.">
+    <meta name="keywords" content="AI background remover, remove background, image cutout, passport photo maker, transparent PNG, image compositor, webp converter">
+    <meta name="author" content="Exos Developer">
+    <link rel="canonical" href="https://app.antigravity-ai.com/">
+    
+    <!-- Open Graph & Twitter for Social Media Sharing -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://app.antigravity-ai.com/">
+    <meta property="og:title" content="Pro AI Background Eraser">
+    <meta property="og:description" content="Upload an image to remove the background instantly. Compose custom layers or standardize passport IDs right in your browser!">
+    <meta property="og:image" content="https://app.antigravity-ai.com/og-preview.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Pro AI Background Eraser">
+
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Essential Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Google Analytics (GA4) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YOUR_TRACKING_ID"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-YOUR_TRACKING_ID');
+    </script>
+</head>
+<body>
+
+    <div class="glass-container">
+        <header>
+            <i class="fa-solid fa-wand-magic-sparkles logo-icon"></i>
+            <h1>AI Background Eraser</h1>
+            <p>Experience seamless, precise image compositing instantly.</p>
+        </header>
+
+        <main>
+            <!-- File Upload / Drop Zone Area -->
+            <div class="upload-zone" id="dropZone">
+                <input type="file" id="imageInput" accept="image/*" hidden>
+                <div class="zone-content">
+                    <i class="fa-solid fa-cloud-arrow-up cloud-icon"></i>
+                    <h3>Drag & Drop your image here</h3>
+                    <p>or</p>
+                    <button class="btn-primary" id="browseBtn">Browse Files</button>
+                </div>
+            </div>
+
+            <!-- Dynamic Loading Animation View -->
+            <div class="processing-container" id="processingUI" style="display: none;">
+                <div class="spinner"></div>
+                <p>Analyzing and removing background...</p>
+            </div>
+
+            <!-- Results View Area -->
+            <div class="results-arena" id="resultsArea" style="display: none;">
+                <div class="image-box">
+                    <h4>Original Image</h4>
+                    <img id="previewImage" src="" alt="Original Preview">
+                </div>
+                <div class="image-box">
+                    <h4>Processed Result</h4>
+                    <img id="resultImage" src="" alt="Removed Background">
+                </div>
+            </div>
+
+            <!-- Global Action Controls (shown after processing) -->
+            <div class="control-panel" id="controls" style="display: none; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-top: 2rem;">
+                <!-- Compositing Controls -->
+                <div class="color-picker-group" style="flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 20px;">
+                    <div style="display: flex; gap: 10px; align-items: center; width: 100%;">
+                        <label for="bgColor" style="white-space: nowrap;">Solid BG:</label>
+                        <input type="color" id="bgColor" value="#0f172a">
+                        <label class="checkbox-label"><input type="checkbox" id="useBgColor"> Apply</label>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center; width: 100%;">
+                        <label style="white-space: nowrap;">or Image BG:</label>
+                        <input type="file" id="bgImageInput" accept="image/*" style="font-size:0.85rem; width: 170px; color:#cbd5e1;">
+                        <button style="padding: 2px 8px; border-radius: 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; cursor: pointer;" onclick="document.getElementById('bgImageInput').value=''; window.customBgImage=null; updatePreviewBackground();">Clear</button>
+                    </div>
+                </div>
+
+                <!-- Subject Positioning -->
+                <select id="subjectPosition" class="format-select" style="min-width: 140px;">
+                    <option value="center">Center Object</option>
+                    <option value="bottom-center">Bottom Center</option>
+                    <option value="bottom-right">Bottom Right</option>
+                    <option value="bottom-left">Bottom Left</option>
+                </select>
+
+                <select id="formatSelect" class="format-select">
+                    <option value="png">PNG</option>
+                    <option value="jpeg">JPG</option>
+                    <option value="webp">WebP</option>
+                </select>
+                <button class="btn-success" onclick="downloadImage()">
+                    <i class="fa-solid fa-download"></i> Save Image
+                </button>
+                <button class="btn-share" onclick="shareImage()">
+                    <i class="fa-solid fa-share-nodes"></i> Share
+                </button>
+                <button class="btn-primary" style="margin-top: 0; background: linear-gradient(45deg, #f093fb, #f5576c);" onclick="downloadPassport()">
+                    <i class="fa-solid fa-id-badge"></i> Passport Mode
+                </button>
+                <button class="btn-action" style="margin-top: 0;" onclick="resetApp()">
+                    <i class="fa-solid fa-arrow-rotate-left"></i> Start Over
+                </button>
+            </div>
+            
+            <script src="script.js"></script>
+        </main>
+    </div>
+
+    <!-- Legal Footer -->
+    <footer class="legal-footer">
+        <p>&copy; 2026 Exos Developer. All rights reserved.</p>
+        <div class="legal-links">
+            <a href="#" onclick="openModal('privacyModal'); return false;">Privacy Policy</a>
+            <a href="#" onclick="openModal('termsModal'); return false;">Terms of Service</a>
+        </div>
+    </footer>
+
+    <!-- Cookie Consent Banner -->
+    <div id="cookieBanner" class="cookie-banner hidden">
+        <div class="cookie-text">
+            <strong>Cookie Compliance</strong> We use cookies (like session tokens) to securely operate the app and ensure optimal functionality. By continuing, you agree to our policies.
+        </div>
+        <button class="btn-success" style="padding: 8px 15px; font-size: 0.95rem; border-radius:15px;" onclick="acceptCookies()">Accept</button>
+    </div>
+
+    <!-- Modals -->
+    <div id="privacyModal" class="legal-modal-overlay" onclick="closeModal(event)">
+        <div class="legal-modal-content">
+            <span class="close-modal" onclick="closeModal(event, true)">&times;</span>
+            <h2>Privacy Policy</h2>
+            <br>
+            <p><strong>1. Data Processing:</strong> This application uploads imagery to a third-party API (remove.bg) exclusively for the purpose of background extraction.</p>
+            <p><strong>2. Storage:</strong> We do not permanently store or harvest your uploaded images on our local servers. Once the processed extraction is delivered to your browser via the real-time proxy, local temporal artifacts are ignored.</p>
+            <p><strong>3. Cookies:</strong> We utilize secure Express Session tokens purely to authenticate your device upon login. We do not use third-party ad tracking scripts.</p>
+        </div>
+    </div>
+
+    <div id="termsModal" class="legal-modal-overlay" onclick="closeModal(event)">
+        <div class="legal-modal-content">
+            <span class="close-modal" onclick="closeModal(event, true)">&times;</span>
+            <h2>Terms of Service</h2>
+            <br>
+            <p><strong>Use of Service:</strong> Exos Background Eraser is provided "as-is". You agree not to upload illegal or highly sensitive content.</p>
+            <p><strong>API Liability:</strong> We are not liable for extended downtimes caused by the third-party upstream background removal provider.</p>
+            <p><strong>Fair Use:</strong> Please use the dynamic extraction tools responsibly and do not attempt to bypass local rate limits or spam requests aggressively.</p>
+        </div>
+    </div>
+
+</body>
+</html>
