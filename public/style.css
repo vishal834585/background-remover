@@ -349,9 +349,30 @@ header p { color: #94a3b8; font-size: 1.1rem; }
 .image-box img {
     max-width: 100%;
     border-radius: 8px;
-    /* Beautiful transparent checkerboard base to show off background removal natively */
-    background: repeating-conic-gradient(#334155 0% 25%, #1e293b 0% 50%) 50% / 20px 20px; 
-    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+}
+#resultImage {
+    touch-action: none;
+    cursor: grab;
+}
+#resultImage:active {
+    cursor: grabbing;
+}
+input[type="range"].glass-range {
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    height: 6px;
+    border-radius: 5px;
+    outline: none;
+}
+input[type="range"].glass-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: var(--secondary);
+    cursor: pointer;
+    box-shadow: 0 0 10px var(--secondary);
 }
 
 @media (max-width: 768px) { .results-arena { grid-template-columns: 1fr; } }

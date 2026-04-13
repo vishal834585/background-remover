@@ -91,6 +91,18 @@ window.resetApp = function() {
     controls.style.display = 'none';
     previewImage.src = '';
     resultImage.src = '';
+    
+    if(document.getElementById('filterScale')) {
+        document.getElementById('filterScale').value = 1;
+        document.getElementById('filterBright').value = 100;
+        document.getElementById('filterContrast').value = 100;
+        document.getElementById('filterSat').value = 100;
+        document.getElementById('scaleVal').innerText = "100%";
+        document.getElementById('brightVal').innerText = "100%";
+        document.getElementById('contrastVal').innerText = "100%";
+        document.getElementById('satVal').innerText = "100%";
+        if(window.updatePreviewBackground) window.updatePreviewBackground();
+    }
 };
 
 // ==========================================
@@ -121,14 +133,26 @@ function constructFinalCanvas(forcePassport = false) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
-    // Bounds definitions
+    // Target Resolution Scaling
+    const resNode = document.getElementById('exportResolution');
+    const resScale = forcePassport ? 1 : (resNode ? parseFloat(resNode.value) || 1 : 1);
+
+    // Determine base dimensions and scale entirely!
+    let baseWidth, baseHeight;
     if (forcePassport) {
-        canvas.width = 600; canvas.height = 600;
+        baseWidth = 600; baseHeight = 600;
     } else if (customBgImage) {
-        canvas.width = customBgImage.width; canvas.height = customBgImage.height;
+        baseWidth = customBgImage.width; baseHeight = customBgImage.height;
     } else {
-        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+        baseWidth = img.naturalWidth; baseHeight = img.naturalHeight;
     }
+    
+    // Expand the physical canvas constraints
+    canvas.width = baseWidth * resScale;
+    canvas.height = baseHeight * resScale;
+    
+    // Apply geometric multiplier mapping to all rendering mathematics natively!
+    ctx.scale(resScale, resScale);
 
     // Paint Solid Background Base
     const format = document.getElementById('formatSelect').value;
@@ -136,12 +160,12 @@ function constructFinalCanvas(forcePassport = false) {
     const bgColor = document.getElementById('bgColor').value;
     if (useBg || (format === 'jpeg' && !customBgImage)) {
         ctx.fillStyle = useBg ? bgColor : '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, baseWidth, baseHeight);
     }
     
     // Paint Image Background Layer
     if (customBgImage && !forcePassport) {
-        ctx.drawImage(customBgImage, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(customBgImage, 0, 0, baseWidth, baseHeight);
     }
     
     // Paint Foreground Subject & Positioning Geometry
@@ -149,36 +173,51 @@ function constructFinalCanvas(forcePassport = false) {
     let drawHeight = img.naturalHeight;
     let dx = 0, dy = 0;
     
+    let scaleMult = parseFloat(document.getElementById('filterScale').value) || 1;
+    
+    // Setup Context Filters matching browser visually
+    ctx.filter = `brightness(${document.getElementById('filterBright').value}%) contrast(${document.getElementById('filterContrast').value}%) saturate(${document.getElementById('filterSat').value}%)`;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    
     if (forcePassport || customBgImage) {
         const imgRatio = img.naturalWidth / img.naturalHeight;
         
         if (imgRatio < 1) { // Tall 
-            drawHeight = canvas.height * (forcePassport ? 0.95 : 0.85); // Passports stay tighter
+            drawHeight = baseHeight * (forcePassport ? 0.95 : 0.85); // Passports stay tighter
             drawWidth = drawHeight * imgRatio;
         } else { // Wide
-            drawWidth = canvas.width * 0.85;
+            drawWidth = baseWidth * 0.85;
             drawHeight = drawWidth / imgRatio;
         }
+    }
+
+    if (!forcePassport) {
+        drawWidth *= scaleMult;
+        drawHeight *= scaleMult;
+    }
         
-        // Dynamic Anchor Calculations
-        if (pos === 'center') {
-            dx = (canvas.width - drawWidth) / 2;
-            dy = (canvas.height - drawHeight) / 2;
-        } else if (pos === 'bottom-center') {
-            dx = (canvas.width - drawWidth) / 2;
-            dy = canvas.height - drawHeight;
-        } else if (pos === 'bottom-right') {
-            dx = canvas.width - drawWidth;
-            dy = canvas.height - drawHeight;
-        } else if (pos === 'bottom-left') {
-            dx = 0;
-            dy = canvas.height - drawHeight;
-        }
-        
-        if (forcePassport) {
-            dx = (canvas.width - drawWidth) / 2;
-            dy = canvas.height - drawHeight;
-        }
+    // Dynamic Anchor Calculations
+    if (pos === 'center') {
+        dx = (baseWidth - drawWidth) / 2;
+        dy = (baseHeight - drawHeight) / 2;
+    } else if (pos === 'bottom-center') {
+        dx = (baseWidth - drawWidth) / 2;
+        dy = baseHeight - drawHeight;
+    } else if (pos === 'bottom-right') {
+        dx = baseWidth - drawWidth;
+        dy = baseHeight - drawHeight;
+    } else if (pos === 'bottom-left') {
+        dx = 0;
+        dy = baseHeight - drawHeight;
+    } else if (pos === 'custom') {
+        dx = (baseWidth - drawWidth) * customPosX;
+        dy = (baseHeight - drawHeight) * customPosY;
+    }
+    
+    if (forcePassport) {
+        dx = (baseWidth - drawWidth) / 2;
+        dy = baseHeight - drawHeight;
     }
     
     ctx.drawImage(img, dx, dy, drawWidth, drawHeight);
@@ -269,6 +308,85 @@ window.closeModal = function(event, force = false) {
 };
 
 // ==========================================
+// Enhancer Sliders Logic
+// ==========================================
+
+const filterScale = document.getElementById('filterScale');
+const filterBright = document.getElementById('filterBright');
+const filterContrast = document.getElementById('filterContrast');
+const filterSat = document.getElementById('filterSat');
+
+// Drag Variables
+let customPosX = 0.5;
+let customPosY = 0.5;
+let isDragging = false;
+let startX, startY, initialPctX, initialPctY;
+const resultImgNode = document.getElementById('resultImage');
+const previewContNode = document.getElementById('previewContainer');
+const posSelectNode = document.getElementById('subjectPosition');
+
+posSelectNode.addEventListener('change', () => {
+    // Reset defaults visually if user clicks away from custom
+    if(posSelectNode.value === 'center') { customPosX = 0.5; customPosY = 0.5; }
+    else if(posSelectNode.value === 'bottom-center') { customPosX = 0.5; customPosY = 1.0; }
+    else if(posSelectNode.value === 'bottom-right') { customPosX = 1.0; customPosY = 1.0; }
+    else if(posSelectNode.value === 'bottom-left') { customPosX = 0.0; customPosY = 1.0; }
+    window.updatePreviewBackground();
+});
+
+resultImgNode.addEventListener('pointerdown', (e) => {
+    isDragging = true;
+    resultImgNode.style.cursor = 'grabbing';
+    resultImgNode.setPointerCapture(e.pointerId);
+    
+    if(posSelectNode.value !== 'custom') {
+        posSelectNode.value = 'custom';
+    }
+    
+    startX = e.clientX;
+    startY = e.clientY;
+    initialPctX = customPosX;
+    initialPctY = customPosY;
+});
+
+resultImgNode.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    
+    const contRect = previewContNode.getBoundingClientRect();
+    // Invert scale sensitivity so larger images don't drag way too fast
+    const scaleMult = parseFloat(document.getElementById('filterScale').value) || 1;
+    let deltaPctX = (dx / contRect.width) / scaleMult;
+    let deltaPctY = (dy / contRect.height) / scaleMult;
+    
+    customPosX = initialPctX + deltaPctX;
+    customPosY = initialPctY + deltaPctY;
+    
+    window.updatePreviewBackground();
+});
+
+resultImgNode.addEventListener('pointerup', (e) => {
+    isDragging = false;
+    resultImgNode.style.cursor = 'grab';
+    resultImgNode.releasePointerCapture(e.pointerId);
+});
+
+resultImgNode.addEventListener('pointercancel', (e) => {
+    isDragging = false;
+    resultImgNode.style.cursor = 'grab';
+});
+
+['input', 'change'].forEach(evt => {
+    filterScale.addEventListener(evt, () => { document.getElementById('scaleVal').innerText = Math.round(filterScale.value * 100) + '%'; window.updatePreviewBackground(); });
+    filterBright.addEventListener(evt, () => { document.getElementById('brightVal').innerText = filterBright.value + '%'; window.updatePreviewBackground(); });
+    filterContrast.addEventListener(evt, () => { document.getElementById('contrastVal').innerText = filterContrast.value + '%'; window.updatePreviewBackground(); });
+    filterSat.addEventListener(evt, () => { document.getElementById('satVal').innerText = filterSat.value + '%'; window.updatePreviewBackground(); });
+});
+
+// ==========================================
 // Dynamic Format UI Feedback
 // ==========================================
 
@@ -278,21 +396,26 @@ window.updatePreviewBackground = function() {
     const bgColor = document.getElementById('bgColor').value;
     const pos = document.getElementById('subjectPosition').value;
     const resultImg = document.getElementById('resultImage');
+    const pCont = document.getElementById('previewContainer');
     
-    // Position rendering
-    resultImg.style.objectFit = customBgImage ? 'contain' : 'fill';
+    // Position & Scale rendering
+    resultImg.style.objectFit = 'contain';
     if (pos === 'center') resultImg.style.objectPosition = '50% 50%';
     else if (pos === 'bottom-center') resultImg.style.objectPosition = '50% 100%';
     else if (pos === 'bottom-right') resultImg.style.objectPosition = '100% 100%';
     else if (pos === 'bottom-left') resultImg.style.objectPosition = '0% 100%';
+    else if (pos === 'custom') resultImg.style.objectPosition = `${customPosX * 100}% ${customPosY * 100}%`;
     
-    // Background rendering
+    resultImg.style.transform = `scale(${filterScale.value})`;
+    resultImg.style.filter = `brightness(${filterBright.value}%) contrast(${filterContrast.value}%) saturate(${filterSat.value}%) drop-shadow(0 10px 20px rgba(0,0,0,0.3))`;
+
+    // Background rendering decoupled to previewContainer
     if (customBgImage && customBgImage.src) {
-        resultImg.style.background = `url(${customBgImage.src}) center/cover no-repeat`;
+        pCont.style.background = `url(${customBgImage.src}) center/cover no-repeat`;
     } else if (useBg || format === 'jpeg') {
-        resultImg.style.background = useBg ? bgColor : '#ffffff';
+        pCont.style.background = useBg ? bgColor : '#ffffff';
     } else {
-        resultImg.style.background = 'repeating-conic-gradient(#334155 0% 25%, #1e293b 0% 50%) 50% / 20px 20px';
+        pCont.style.background = 'repeating-conic-gradient(#334155 0% 25%, #1e293b 0% 50%) 50% / 20px 20px';
     }
 }
 
